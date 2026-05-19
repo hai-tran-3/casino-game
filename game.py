@@ -24,7 +24,8 @@ def is_instant_win(hand):
 def calculate_best_score(hand):
     """Calculates the score closest to 0, handling flexible Ace values."""
     base_score = 0
-    ace_count = 0
+    aces_in_hand = [card for card in hand if card['rank'] == "Ace"]
+    ace_count = len(aces_in_hand)
     
     # Calculate non-Ace cards and count Aces
     for card in hand:
@@ -33,8 +34,6 @@ def calculate_best_score(hand):
             base_score += 10 * sign
         elif card['rank'] != 'Ace':
             base_score += int(card['rank']) * sign
-        else:
-            ace_count += 1
 
     if ace_count == 0:
         return base_score
@@ -49,7 +48,6 @@ def calculate_best_score(hand):
         nonlocal best_score, best_distance
         if aces_left == 0:
             distance = abs(current_score)
-            # We prefer non-busting scores. If both bust, prefer the lower distance.
             if distance <= 18 and distance < best_distance:
                 best_distance = distance
                 best_score = current_score
@@ -59,7 +57,7 @@ def calculate_best_score(hand):
             return
 
         # Current Ace's sign depends on its color
-        current_ace_card = hand[-aces_left]
+        current_ace_card = aces_in_hand[aces_left - 1]
         sign = 1 if current_ace_card['color'] == 'Red' else -1
         for val in possible_values:
             evaluate_aces(current_score + (val * sign), aces_left - 1)
