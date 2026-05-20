@@ -81,6 +81,17 @@ def display_hand(name, hand):
 
 # --- GAMEPLAY LOOP ---
 def play_game():
+    print("--- Game's rule ---")
+    print("\n-Trying to get the final point as close to 0 as possible. The final point is the distance away from 0.")
+    print("-2–9 is worth face value. Face card worth 10. Aces can be 1, 10 or 11 point.")
+    print("-Red is positive, black is negative.")
+    print("-Each start with 2 and can draw 3 more card.")
+    print("-Automatically win if get 2 aces of different color.")
+    print("-If both player and dealer have the same point, it is a draw. If both player and dealer bust, it is a draw.")
+    print("-Above 18 is a bust.")
+    print("-Dealer need a minimum of 12 points.\n")
+
+
     deck = create_deck()
     
     # Deal initial 2 cards
