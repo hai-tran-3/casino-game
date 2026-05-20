@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+"""
+Created by: Hai Tran
+Created on: May 2026
+This is a new casino game
+"""
+
 import random
 
 # --- GAME SETUP ---
@@ -109,8 +116,10 @@ def play_game():
             print(f"\nDrew: {new_card['rank']} of {new_card['suit']} ({new_card['color']})")
             display_hand("Player", player_hand)
             cards_drawn += 1
-        else:
+        elif choice == "n":
             break
+        else:
+            print("Invalid input. Please enter 'y' or 'n'.")
 
     player_score = calculate_best_score(player_hand)
     player_bust = abs(player_score) > 18
@@ -159,4 +168,13 @@ def play_game():
         print("DEALER WINS (Closer to 0)!")
 
 if __name__ == "__main__":
-    play_game()
+    while True:
+        play_game()
+        again = (
+            input("\nWould you like to play another round? (y/n): ")
+            .strip()
+            .lower()
+        )
+        if again != "y":
+            print("Thanks for playing!")
+            break
