@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zero Casino</title>
+
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: gold;
+        }
+
+        .game-area {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .hand {
+            margin: 20px 0;
+            padding: 20px;
+            background: #1e293b;
+            border-radius: 12px;
+        }
+
+        .cards {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .card {
+            width: 100px;
+            height: 140px;
+            border-radius: 10px;
+            background: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .red {
+            color: red;
+        }
+
+        .black {
+            color: black;
+        }
+
+        button {
+            padding: 12px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            background: gold;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: orange;
+        }
+
+        #message {
+            margin-top: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            color: cyan;
+        }
+
+        .rules {
+            background: #111827;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="game-area">
+        <h1>🎰 Zero Casino 🎰</h1>
+
+        <div class="rules">
+            <h3>Rules</h3>
+            <ul>
+                <li>Get as close to 0 as possible.</li>
+                <li>Red cards are positive.</li>
+                <li>Black cards are negative.</li>
+                <li>2–9 = face value.</li>
+                <li>10/J/Q/K = 10 points.</li>
+                <li>Ace = 1, 10, or 11.</li>
+                <li>Above 18 = bust.</li>
+                <li>Two aces of different colors = instant win.</li>
+            </ul>
+        </div>
+
+        <div class="hand">
+            <h2>Player</h2>
+            <div id="playerCards" class="cards"></div>
+            <p>Score: <span id="playerScore">0</span></p>
+        </div>
+
+        <div class="hand">
+            <h2>Dealer</h2>
+            <div id="dealerCards" class="cards"></div>
+            <p>Score: <span id="dealerScore">?</span></p>
+        </div>
+
+        <button onclick="drawCard()">Draw Card</button>
+        <button onclick="stand()">Stand</button>
+        <button onclick="startGame()">New Game</button>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        let deck = [];
+        let playerHand = [];
+        let dealerHand = [];
+        let playerDraws = 0;
+        let gameOver = false;
+
+        function createDeck() {
+            const suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
+            const ranks = [
+                '2', '3', '4', '5', '6', '7', '8', '9',
+                '10', 'Jack', 'Queen', 'King', 'Ace'
+            ];
+
+            let d = [];
+
+            for (let suit of suits) {
+                let color =
+                    suit === 'Hearts' || suit === 'Diamonds'
+                        ? 'Red'
+                        : 'Black';
+
+                for (let rank of ranks) {
+                    d.push({ rank, suit, color });
+                }
+            }
+
+            return shuffle(d);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function isInstantWin(hand) {
+            if (hand.length !== 2) return false;
+
+            return (
+                hand[0].rank === 'Ace' &&
+                hand[1].rank === 'Ace' &&
+                hand[0].color !== hand[1].color
+            );
+        }
+
+        function calculateBestScore(hand) {
+            let base = 0;
+            let aces = [];
+
+            for (let card of hand) {
+                let sign = card.color === 'Red' ? 1 : -1;
+
+                if (card.rank === 'Ace') {
+                    aces.push(sign);
+                } else if (
+                    ['10', 'Jack', 'Queen', 'King'].includes(card.rank)
+                ) {
+                    base += 10 * sign;
+                } else {
+                    base += parseInt(card.rank) * sign;
+                }
+            }
+
+            if (aces.length === 0) return base;
+
+            let best = null;
+            let bestDist = Infinity;
+
+            function test(score, index) {
+                if (index === aces.length) {
+                    let dist = Math.abs(score);
+
+                    if (
+                        (dist <= 18 && dist < bestDist) ||
+                        best === null
+                    ) {
+                        best = score;
+                        bestDist = dist;
+                    }
+
+                    return;
+                }
+
+                for (let val of [1, 10, 11]) {
+                    test(score + val * aces[index], index + 1);
+                }
+            }
+
+            test(base, 0);
+
+            return best;
+        }
+
+        function renderHand(hand, elementId) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = "";
+
+            for (let card of hand) {
+                const div = document.createElement("div");
+
+                div.className =
+                    "card " +
+                    (card.color === "Red" ? "red" : "black");
+
+                div.innerHTML = `
+        <div>${card.rank}</div>
+        <div>${card.suit}</div>
+      `;
+
+                container.appendChild(div);
+            }
+        }
+
+        function renderDealerHidden() {
+            const container = document.getElementById("dealerCards");
+            container.innerHTML = "";
+
+            const firstCard = dealerHand[0];
+
+            const visibleCard = document.createElement("div");
+
+            visibleCard.className =
+                "card " +
+                (firstCard.color === "Red" ? "red" : "black");
+
+            visibleCard.innerHTML = `
+      <div>${firstCard.rank}</div>
+      <div>${firstCard.suit}</div>
+    `;
+
+            container.appendChild(visibleCard);
+
+            const hiddenCard = document.createElement("div");
+
+            hiddenCard.className = "card";
+            hiddenCard.style.background = "#444";
+            hiddenCard.style.color = "white";
+
+            hiddenCard.innerHTML = `
+      <div style="font-size:40px;">🂠</div>
+      <div>Hidden</div>
+    `;
+
+            container.appendChild(hiddenCard);
+        }
+
+        function renderHands(hideDealer = true) {
+            renderHand(playerHand, "playerCards");
+
+            if (hideDealer) {
+                renderDealerHidden();
+                document.getElementById("dealerScore").textContent = "?";
+            } else {
+                renderHand(dealerHand, "dealerCards");
+
+                document.getElementById("dealerScore").textContent =
+                    Math.abs(calculateBestScore(dealerHand));
+            }
+
+            document.getElementById("playerScore").textContent =
+                Math.abs(calculateBestScore(playerHand));
+        }
+
+        function startGame() {
+            deck = createDeck();
+
+            playerHand = [deck.pop(), deck.pop()];
+            dealerHand = [deck.pop(), deck.pop()];
+
+            playerDraws = 0;
+            gameOver = false;
+
+            document.getElementById("message").textContent = "";
+
+            renderHands(true);
+
+            if (isInstantWin(playerHand)) {
+                renderHands(false);
+                endGame("🎉 PLAYER INSTANT WIN!");
+            } else if (isInstantWin(dealerHand)) {
+                renderHands(false);
+                endGame("💀 DEALER INSTANT WIN!");
+            }
+        }
+
+        function drawCard() {
+            if (gameOver) return;
+
+            playerHand.push(deck.pop());
+            playerDraws++;
+
+            renderHands(true);
+
+            let score =
+                Math.abs(calculateBestScore(playerHand));
+
+            if (playerDraws >= 3) {
+                stand();
+                return;
+            }
+        }
+
+        function stand() {
+            if (gameOver) return;
+
+            while (
+                Math.abs(calculateBestScore(dealerHand)) > 12 &&
+                dealerHand.length < 5
+            ) {
+                dealerHand.push(deck.pop());
+            }
+
+            renderHands(false);
+
+            determineWinner();
+        }
+
+        function determineWinner() {
+            const p =
+                Math.abs(calculateBestScore(playerHand));
+
+            const d =
+                Math.abs(calculateBestScore(dealerHand));
+
+            const pBust = p > 18;
+            const dBust = d > 18;
+
+            let msg = "";
+
+            if (pBust && dBust) {
+                msg = "🤝 DRAW — BOTH BUSTED";
+            } else if (pBust) {
+                msg = "💀 DEALER WINS";
+            } else if (dBust) {
+                msg = "🎉 PLAYER WINS";
+            } else if (p === d) {
+                msg = "🤝 DRAW";
+            } else if (p < d) {
+                msg = "🎉 PLAYER WINS";
+            } else {
+                msg = "💀 DEALER WINS";
+            }
+
+            endGame(msg);
+        }
+
+        function endGame(message) {
+            gameOver = true;
+
+            document.getElementById("message").textContent =
+                message;
+        }
+
+        startGame();
+    </script>
+
+</body>
+
+</html>
